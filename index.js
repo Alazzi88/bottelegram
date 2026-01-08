@@ -1,42 +1,41 @@
-require("dotenv").config();
+require("dotenv").config(); // استدعاء مكتبة dotenv للقراءة من ملف .env محلياً
 const TelegramBot = require("node-telegram-bot-api");
 const express = require("express");
 
-// --- إعداد السيرفر لـ Render ---
-const app = express();
-app.get("/", (req, res) => {
-  res.send("Bot is alive! 🤖");
-});
+// 🔴 جلب التوكن من متغيرات البيئة
+const token = process.env.BOT_TOKEN;
 
-// Render يعطيك منفذ (Port) تلقائي، يجب استخدامه
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-
-// --- إعداد البوت ---
-const token = process.env.TELEGRAM_BOT_TOKEN; // سيتم جلبه من إعدادات Render
-
+// التحقق من وجود التوكن لتجنب الأخطاء
 if (!token) {
-  // هذا الخطأ سيظهر في سجلات Render إذا نسيت وضع التوكن
   console.error(
-    "❌ Error: TELEGRAM_BOT_TOKEN is missing in Environment Variables!"
+    "❌ خطأ: لم يتم العثور على التوكن! تأكد من إضافته في Environment Variables."
   );
   process.exit(1);
 }
 
+// إعداد البوت
 const bot = new TelegramBot(token, { polling: true });
 
-console.log("تم تشغيل البوت بنجاح... 🛡️");
+// إعداد خادم Express
+const app = express();
+const port = process.env.PORT || 3000;
 
+app.get("/", (req, res) => {
+  res.send("Bot is running securely! 🔒🚀");
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+console.log("تم تفعيل نظام الحماية (Bot Started)... 🛡️");
+
+// --- قائمة الكلمات الممنوعة ---
 const badKeywords = [
-  // القائمة (بدون همزات)
   "سكليف",
   "سكلفت",
   "اجازه",
   "اجازة",
-  "ו𐢋ߺࡋߺع  🇸🇦/ 𐭦ߺݏ࠭ࡉ​​​​​​𐬠 𐢋ߺࡅٜߺ ي",
-  "اجازهمرضيه",
   "مرضيه",
   "طبي",
   "طبيات",
@@ -49,7 +48,6 @@ const badKeywords = [
   "غيابات",
   "مرافق",
   "صحي",
-  "تعديل",
   "مستثمر",
   "يستثمر",
   "استثمار",
@@ -69,21 +67,23 @@ const badKeywords = [
   "مضمون",
   "مضمونه",
   "دخلتمعشخص",
-  "منحول",
-  "تحويل",
-  "بنكي",
-  "صراف",
   "نصب",
   "احتيال",
   "هكر",
   "تهكير",
   "اختراق",
   "استرجاع",
+  "منحول",
+  "تحويل",
+  "بنكي",
+  "صراف",
   "زواج",
   "مسيار",
   "خطابه",
   "مطلقه",
   "تعارف",
+  "خاص",
+  "كلمني",
   "سحر",
   "روحاني",
   "الشيخ",
@@ -97,16 +97,19 @@ const badKeywords = [
   "واتساب",
   "تواصل",
   "رقمي",
-  "كلمني",
-  "خاص",
+  "سكس",
+  "اباحي",
+  "موجب",
+  "سالب",
+  "اسستثمر",
 ];
 
 function stripText(text) {
   if (!text) return "";
   let clean = text;
-  clean = clean.replace(/[\u0640\u064B-\u065F\u0670]/g, ""); // إزالة التطويل
-  clean = clean.replace(/[^\p{L}\p{N}]/gu, ""); // إزالة الرموز
-  clean = clean.replace(/[أإآاٱ]/g, "ا"); // توحيد الألف
+  clean = clean.replace(/[\u0640\u064B-\u065F\u0670]/g, "");
+  clean = clean.replace(/[^\p{L}\p{N}]/gu, "");
+  clean = clean.replace(/[أإآا]/g, "ا");
   clean = clean.replace(/[ةه]/g, "ه");
   clean = clean.replace(/[ىي]/g, "ي");
   clean = clean.replace(/[ؤ]/g, "و");
@@ -122,16 +125,14 @@ bot.on("message", async (msg) => {
   if (msg.contact) {
     try {
       await bot.deleteMessage(chatId, msg.message_id);
-      return;
     } catch (e) {}
+    return;
   }
 
   const originalText = msg.text || msg.caption;
   if (!originalText) return;
 
   const strippedText = stripText(originalText);
-
-  // 2. كشف الأنماط المخالفة
   const countryCodeRegex = /(\+|00)\d+/;
   const linkRegex =
     /(https?:\/\/)|(www\.)|(\.com|\.net|\.org|\.me)|(t\.me\/)|(@[\w]+)/i;
@@ -149,7 +150,12 @@ bot.on("message", async (msg) => {
   ) {
     try {
       await bot.deleteMessage(chatId, msg.message_id);
-      console.log(`🗑️ Deleted msg from: ${msg.from.first_name}`);
+      console.log(`🗑️ Deleted message from: ${msg.from.first_name}`);
     } catch (error) {}
+  }
+});
+
+bot.on("polling_error", (error) => {
+  if (error.code !== "EFATAL") {
   }
 });
